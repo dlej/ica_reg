@@ -1,5 +1,11 @@
+% path to FastICA
+addpath('../ext/FastICA_25')
+
+% include our functions
+addpath('../inc')
+
 % initialize rng seed
-%rng(0);
+rng(0);
 
 n = 1e4; % number of samples [representative of edges in a component]
 d = 10;  % number of components/patients
@@ -52,7 +58,6 @@ D = cov(X_tilde')^-(0.5);
 X_tilde = D*X_tilde;
 
 % run fastICA
-addpath('../FastICA_25')
 [icasig, ~, W_fastica] = fastica(X_tilde, 'approach', 'symm', 'g', 'tanh');
 
 % run our regularized ICA
