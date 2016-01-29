@@ -13,7 +13,6 @@ dg1 = @(x) 1 - tanh(x).^2;
 [p, n] = size(X);
 
 converged = false;
-m = 0.2; % momentum (keep small since we use bold driver)
 r = 1e-2; % initial learning weight for bold driver
 
 W = rand(p); % initialize W to a random orthogonal matrix
@@ -29,24 +28,27 @@ for i=1:500 % terminate after 500 iterations
     f0 = f;
     fprintf('.');
     
+    % update W
+    W = W - r*dW;
+
+    % re-orthogonalize W
+    W = W/norm(W);
+    while norm(W*W'-eye(p)) >= 1e-8
+        W = 3/2*W - 1/2*W*W'*W;
+    end
+    
+    % evaluate objective
     [f,dW] = ica_grad(W,X,Y,G1,g1,lambda,alpha);
-    dW = r*dW + m*dW0; % use momentum and bold driver weight
-    %dW = dW - W*diag(diag(W'*dW)); % only accept tangential updates
-    W = W - dW;
 
     delta = (f - f0)/abs(f0);
     if delta < 1e-8 % gain more rate confidence if error goes down
         r = r*1.05;
         
-        % re-orthogonalize W
-        W = W/norm(W);
-        while norm(W*W'-eye(p)) >= 1e-8
-            W = 3/2*W - 1/2*W*W'*W;
-        end
     else
-        r = r/2; % cut rate confidence if error goes up
+        r = r*0.5; % cut rate confidence if error goes up
         W = W0;  % undo the update
-        dW = 0;  % and eliminate momentum
+        dW = dW0;  % and eliminate momentum
+        f = f0;
     end
     
     if verbose

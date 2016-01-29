@@ -7,9 +7,9 @@ addpath('../inc')
 % initialize rng seed
 rng(0);
 
-n = 1e4; % number of samples [representative of edges in a component]
+n = 1e5; % number of samples [representative of edges in a component]
 d = 20;  % number of components/patients
-r = 5;   % number of phenotypes
+r = 10;   % number of phenotypes
 
 % noise applied to various variables
 noise_a = 0.5;
