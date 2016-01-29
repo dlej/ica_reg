@@ -34,17 +34,18 @@ for i=1:500 % terminate after 500 iterations
     %dW = dW - W*diag(diag(W'*dW)); % only accept tangential updates
     W = W - dW;
 
-    % re-orthogonalize W
-    W = W/norm(W);
-    while norm(W*W'-eye(p)) >= 1e-8
-        W = 3/2*W - 1/2*W*W'*W;
-    end
-    
     delta = (f - f0)/abs(f0);
     if delta < 1e-8 % gain more rate confidence if error goes down
         r = r*1.05;
+        
+        % re-orthogonalize W
+        W = W/norm(W);
+        while norm(W*W'-eye(p)) >= 1e-8
+            W = 3/2*W - 1/2*W*W'*W;
+        end
     else
         r = r/2; % cut rate confidence if error goes up
+        W = W0;  % undo the update
         dW = 0;  % and eliminate momentum
     end
     
@@ -86,7 +87,7 @@ for k = 1:p
     gamma = mean(G(wX));
     
     [s, ds] = scad(wY, lambda, alpha);
-
+    
     f = f + gamma + sum(s);
 
     dgamma = mean(bsxfun(@times, X, g(wX)), 2);

@@ -8,7 +8,7 @@ addpath('../inc')
 rng(0);
 
 n = 1e4; % number of samples [representative of edges in a component]
-d = 10;  % number of components/patients
+d = 20;  % number of components/patients
 r = 5;   % number of phenotypes
 
 % noise applied to various variables
