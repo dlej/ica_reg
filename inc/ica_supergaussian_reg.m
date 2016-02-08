@@ -1,9 +1,11 @@
-function [ S, W ] = ica_supergaussian_reg( X, Y, lambda, alpha )
+function [ S, W ] = ica_supergaussian_reg( X, Y, lambda, alpha,verbose )
 %ICA_SUPERGAUSSIAN_REG ICA with sparse regression regularization
 %   X and Y should be pre-whitened
 
 % verbosity flag
-verbose = false;
+if(~exist('verbose','var'))
+    verbose = false;
+end
 
 % contrast function an derivatives
 G1 = @(x) log(cosh(x));
