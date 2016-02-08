@@ -1,6 +1,8 @@
 function [ S, W ] = ica_supergaussian_reg( X, Y, lambda, alpha )
 %ICA_SUPERGAUSSIAN_REG ICA with sparse regression regularization
 %   X and Y should be pre-whitened
+% Gradient calculation is parallelized over features with parfor
+% and will use matlabpool if available
 
 % verbosity flag
 verbose = false;
@@ -80,7 +82,7 @@ WY = W*Y;
 f = 0;
 dW = zeros(p);
 
-for k = 1:p
+parfor k = 1:p
     
     w = W(k,:)';
     wX = WX(k,:);
