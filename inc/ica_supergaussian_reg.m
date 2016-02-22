@@ -1,4 +1,4 @@
-function [ S, W ] = ica_supergaussian_reg( X, Y, lambda, alpha, verbose, penalty, splits, nsplititers )
+function [ S, W ] = ica_supergaussian_reg( X, Y, lambda, alpha, verbose, penalty, nsplits, splititers )
 %ICA_SUPERGAUSSIAN_REG ICA with sparse regression regularization
 %   X and Y should be pre-whitened
 % Gradient calculation is parallelized over features with parfor
@@ -19,6 +19,9 @@ else
 end
 
 % number of splits
+% we will start with 2^nsplits random mixing matrices
+% and update them simultaneously, pruning half of the worst
+% performers at regular intervals
 if(~exist('nsplits','var'))
     nsimult = 1;
 else
