@@ -125,7 +125,7 @@ WY = W*Y;
 f = 0;
 dW = zeros(p);
 
-for k = 1:p
+parfor k = 1:p
     
     w = W(k,:)';
     wX = WX(k,:);
