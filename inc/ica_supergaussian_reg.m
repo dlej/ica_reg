@@ -1,13 +1,22 @@
-function [ S, W ] = ica_supergaussian_reg( X, Y, lambda, alpha, verbose, penalty, nsplits, splititers )
+function [ S, W ] = ica_supergaussian_reg( X, Y, D, lambda, alpha, penalty, nsplits, splititers )
 %ICA_SUPERGAUSSIAN_REG ICA with sparse regression regularization
-%   X and Y should be pre-whitened
+%   Input:
+%       X           Data to be separated into (row) components. Should be
+%                   pre-whitened.
+%       Y           Target variables.
+%       D           Matrix that was used to whiten X.
+%       lambda      regularization parameter
+%       alpha       SCAD parameter
+%       penalty     'l1' or 'scad'
+%       nsplits     multiple-start tournament depth
+%       splititers  iterations between prunings in tournament
+%
+%   Output:
+%       S           Recovered compnents
+%       W           Orthogonal mixing matrix s.t. S=WX
+%
 % Gradient calculation is parallelized over features with parfor
 % and will use matlabpool if available
-
-% verbosity flag
-if(~exist('verbose','var'))
-    verbose = false;
-end
 
 % penalty
 if(~exist('penalty','var'))
@@ -18,7 +27,7 @@ else
     penalty = 0;
 end
 
-% number of splits
+% number of splits/branching factor
 % we will start with 2^nsplits random mixing matrices
 % and update them simultaneously, pruning half of the worst
 % performers at regular intervals
@@ -33,7 +42,7 @@ if(~exist('splititers','var'))
     splititers = 10;
 end
 
-% contrast function an derivatives
+% contrast function and derivatives
 G1 = @(x) log(cosh(x));
 g1 = @(x) tanh(x);
 dg1 = @(x) 1 - tanh(x).^2;
@@ -41,40 +50,45 @@ dg1 = @(x) 1 - tanh(x).^2;
 [p, n] = size(X);
 
 converged = false;
-r = 1e-2*ones(nsimult); % initial learning weight for bold driver
+r = 1e-2*ones(nsimult,1); % initial learning weight for bold driver
 
-% initialize W to a random orthogonal matrices
+% initialize W to random orthogonal matrices for the tournament
 W = zeros(p,p,nsimult);
 for k=1:nsimult
-    Wgen = randn(p); 
-    [Wgen,~] = eig(Wgen*Wgen');
-    W(:,:,k) = Wgen;
+    W(:,:,k) = orthonormal_gen(p,p);
 end
 
 dW = zeros(p,p,nsimult);
-f = 1e10*ones(nsimult); % put some ridiculous value here so we don't randomly guess
-          % the next function value and think we've converged
 
+% put some ridiculous value here so we don't randomly guess
+% the next function value and think we've converged
+f = 1e10*ones(nsimult,1); 
+
+% start with all of the "players" in the "tournament"
 keepers = 1:nsimult;
+
+P = eye(p) - 1/p*ones(p);
+Y_tilde = pinv(P/D)*(P*Y);
           
 for i=1:500 % terminate after 500 iterations
     W0 = W;
     dW0 = dW;
     f0 = f;
     fprintf('.');
-
-    % re-orthogonalize W
+    
+    % Do this for each of the "players" left in the "tournament"
     for k=keepers
         % update W
         W(:,:,k) = W(:,:,k) - r(k)*dW(:,:,k);
-
+        
+        % re-orthogonalize W
         W(:,:,k) = W(:,:,k)/norm(W(:,:,k));
         while norm(W(:,:,k)*W(:,:,k)'-eye(p)) >= 1e-8
             W(:,:,k) = 3/2*W(:,:,k) - 1/2*W(:,:,k)*W(:,:,k)'*W(:,:,k);
         end
     
         % evaluate objective
-        [f_,dW_] = ica_grad(W(:,:,k),X,Y,G1,g1,lambda,alpha,penalty);
+        [f_,dW_] = ica_grad(W(:,:,k),X,Y_tilde,G1,g1,lambda,alpha,penalty);
         f(k) = f_;
         dW(:,:,k) = dW_;
 
@@ -85,20 +99,18 @@ for i=1:500 % terminate after 500 iterations
         else
             r(k) = r(k)*0.5; % cut rate confidence if error goes up
             W(:,:,k) = W0(:,:,k);  % undo the update
-            dW(:,:,k) = dW0(:,:,k);  % and eliminate momentum
+            dW(:,:,k) = dW0(:,:,k);
             f(k) = f0(k);
         end
     end
     
-    if verbose
-        fprintf('Last cost delta: %.5f\n', delta);
-    end
-    
+    % Stop if we only have one "player" left and aren't changing
     if length(keepers) == 1 && abs(delta) < 1e-5
         converged = true;
         break;
     end
     
+    % Prune the worst half of the players out
     kk = length(keepers);
     if kk > 1 && mod(i,splititers) == 0
         [~,I] = sort(f);
