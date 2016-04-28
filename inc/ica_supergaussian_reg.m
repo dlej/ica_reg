@@ -20,10 +20,12 @@ function [ S, W ] = ica_supergaussian_reg( X, Y, D, lambda, alpha, penalty, nspl
 
 % penalty
 if(~exist('penalty','var'))
+    alpha = 0;
     penalty = 0;
 elseif strcmp(penalty, 'scad')
     penalty = 1;
 else
+    alpha = 0;
     penalty = 0;
 end
 

@@ -13,8 +13,8 @@ r = 5;   % number of phenotypes
 
 % noise applied to various variables
 noise_a = 0;
-noise_x = 20;
-noise_y = 0.0;
+noise_x = 0;
+noise_y = 1.0;
 
 S = zeros(d,n);
 
@@ -62,15 +62,17 @@ X_tilde = D*X_tilde;
 
 % run our regularized ICA
 % (these parameters seem reasonable for the time being)
-lambda = 1;
+lambda = 10;
 alpha = 2;
-[ S_reg, W_reg ] = ica_supergaussian_reg(X_tilde, D*Y, lambda, alpha);
+[ S_reg, W_reg ] = ica_supergaussian_reg(X_tilde, Y, D, lambda);
 
 %%
 
 % compute regression coefficients for each solution
 B1 = W_fastica*D*Y;
-B2 = W_reg*D*Y;
+P = eye(d) - 1/d*ones(d);
+Y_tilde = pinv(P/D)*(P*Y);
+B2 = W_reg*Y_tilde;
 
 % plot the regression coefficient matrices
 imagesc([abs(B1); zeros(1,r); 2*ones(1,r); zeros(1,r); abs(B2)], [0,1.2])
