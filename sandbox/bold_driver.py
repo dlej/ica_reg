@@ -28,21 +28,20 @@ class BoldDriverOptimizer():
         f0 = self.f
         x0 = self.x[:]
         
-        feed_dict0 = {k: v for k,v in zip(self._tf_x, x0)}
+        feed_dict0 = {tf_x: x for tf_x, x in zip(self._tf_x, x0)}
         if self._f_next is None:
             self.f = self._tf_f.eval(feed_dict=feed_dict0)
         else:
             self.f = self._f_next
         dx0 = [dx.eval(feed_dict=feed_dict0) for dx in self._tf_dx]
 
-        for i, (x, dx) in enumerate(zip(x0, dx0)):
-            self.x[i] = x - self._r*dx
-            if self._tf_proj[i] is not None:
-                self.x[i] = self._tf_proj[i].eval(feed_dict={self._tf_x[i]: self.x[i]})
+        self.x = [x - self._r*dx for x, dx in zip(x0, dx0)]
+        self.x = [x if proj is None else proj.eval(feed_dict={tf_x: x}) \
+                for x, tf_x, proj in zip(self.x, self._tf_x, self._tf_proj)]
 
-        feed_dict = {k: v for k,v in zip(self._tf_x, self.x)}
+        feed_dict = {tf_x: x for tf_x, x in zip(self._tf_x, self.x)}
         self._f_next = self._tf_f.eval(feed_dict=feed_dict)
-        if self._f_next > self.f:
+        if self._f_next >= self.f:
             self.x = x0
             self.f = f0
             self._f_next = None

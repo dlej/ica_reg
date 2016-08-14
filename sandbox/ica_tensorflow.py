@@ -39,7 +39,7 @@ def tf_ica_subgaussian_obj(W, x):
 
 p = 2
 
-N = 10**6
+N = 10**4
 
 s1 = np.sin((np.arange(N)+1)/200)
 s2 = np.mod((np.arange(N)+1)/200, 2) - 1
@@ -60,7 +60,7 @@ X_w = D.dot(X)
 x = tf.constant(X_w, dtype=tf.float32)
 W = tf.placeholder(tf.float32, shape=[p, p])
 W_ortho = tf_orthogonalize(W)
-J = tf_ica_obj(W, x)
+J = tf_ica_subgaussian_obj(W, x)
 
 with tf.Session() as sess:
     W0 = W_ortho.eval(feed_dict={W: np.random.randn(p, p)})
