@@ -4,7 +4,7 @@ import unittest
 
 class BoldDriverOptimizer():
 
-    def __init__(self, sess, f, x, x0, proj=None, r=1.0, rho=1.1, 
+    def __init__(self, sess, f, x, x0, proj=None, r=1.0, rho=1.2, 
             sigma=0.5, rtol=1e-5, atol=1e-8):
         self._sess = sess
         self._tf_f = f

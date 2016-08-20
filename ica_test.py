@@ -9,7 +9,7 @@ from ica_reg import ica_reg
 
 p = 2
 
-N = 10**4
+N = 10**5
 
 s1 = np.sin((np.arange(N)+1)/200)
 s2 = np.mod((np.arange(N)+1)/200, 2) - 1
@@ -22,7 +22,7 @@ X = A.dot(S)
 
 #D = sp.linalg.sqrtm(np.linalg.inv(X.dot(X.T)/N))
 
-icasig, W, B, b = ica_reg(X, np.zeros((2, 1)), alpha=0.001, lamda=0.0)
+icasig, W, B, b = ica_reg(X, np.zeros((2, 1)), alpha=0.0001, lamda=0.0)
 
 print(W, B, b)
 

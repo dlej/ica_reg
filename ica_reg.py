@@ -1,6 +1,8 @@
 import numpy as np
 import tensorflow as tf
 
+
+
 from sklearn.decomposition import PCA
 
 from bold_driver import BoldDriverOptimizer
@@ -18,6 +20,10 @@ def tf_l1_norm(A):
 
 def tf_l2_norm(A):
     return tf.sqrt(tf.reduce_sum(tf.pow(A, 2)))
+
+def tf_l1_l2_ratio(A):
+    n = np.prod([d.value for d in A.get_shape()])
+    return (tf_l1_norm(A) / tf_l2_norm(A) - 1) / (n**0.5 - 1)
 
 def tf_orthogonalize(W, eps=1e-6, back_prop=False):
     p = W.get_shape()[0].value
