@@ -1,8 +1,6 @@
 import numpy as np
 import tensorflow as tf
 
-
-
 from sklearn.decomposition import PCA
 
 from bold_driver import BoldDriverOptimizer
@@ -39,15 +37,14 @@ def tf_ica_obj(W, X):
     G = tf.log(tf_cosh(tf.matmul(W, X)))
     EG = tf.reduce_mean(G, reduction_indices=[1])
     nu = np.log(np.cosh(np.random.randn(10**6))).mean()
-    return -tf.reduce_sum(tf.pow(EG - nu*tf.ones_like(EG), 2))
+    return -tf.reduce_mean(tf.pow(EG - nu*tf.ones_like(EG), 2))
 
 def tf_ica_supergaussian_obj(W, X):
     G = tf.log(tf_cosh(tf.matmul(W, X)))
-    return tf.reduce_sum(tf.reduce_mean(G, reduction_indices=[0]))
+    return tf.reduce_mean(tf.reduce_mean(G, reduction_indices=[1]))
 
 def tf_ica_subgaussian_obj(W, X):
     return -tf_ica_supergaussian_obj(W, X)
-
 
 def ica_reg(X, Y, alpha=1.0, lamda=1.0, ica_obj=tf_ica_obj):
     p, n = X.shape
@@ -57,36 +54,44 @@ def ica_reg(X, Y, alpha=1.0, lamda=1.0, ica_obj=tf_ica_obj):
 
     pca = PCA(whiten=True)
     X_w = pca.fit_transform(X.T).T
-    D_inv = tf.constant(np.linalg.pinv(pca.components_), dtype=tf.float32)
+    D = pca.components_
+    P = np.eye(p) - np.ones(p)/p
+    Y_tilde = tf.constant(np.linalg.pinv(P.dot(np.linalg.pinv(D))).dot(P.dot(Y)), dtype=tf.float32)
+    #D_inv = tf.constant(np.linalg.pinv(pca.components_), dtype=tf.float32)
 
     W = tf.placeholder(tf.float32, shape=[p, p])
-    B = tf.placeholder(tf.float32, shape=[p, r])
-    b = tf.placeholder(tf.float32, shape=[r])
+    #B = tf.placeholder(tf.float32, shape=[p, r])
+    #b = tf.placeholder(tf.float32, shape=[r])
+    B = tf.matmul(W, Y_tilde)
+    B_err = tf.placeholder(tf.float32, shape=[p, r])
 
     W_ortho = tf_orthogonalize(W)
+    B_err_null = tf.matmul(B, tf.matrix_solve_ls(B, B_err))
 
-    A = tf.matmul(D_inv, tf.transpose(W))
-    Y_hat = tf.matmul(A, B) + tf.tile(tf.reshape(b, [1, r]), [p, 1])
+    #A = tf.matmul(D_inv, tf.transpose(W))
+    #Y_hat = tf.matmul(A, B) + tf.tile(tf.reshape(b, [1, r]), [p, 1])
     
     J_ica = ica_obj(W, tf.constant(X_w, dtype=tf.float32)) 
-    J_regression = 0.5*tf_l2_norm(Y - Y_hat)
-    J_sparse = tf_l1_norm(B)
+    #J_regression = 0.5*tf_l2_norm(Y - Y_hat)
+    J_sparse = tf_l1_norm(B + B_err)
 
-    J = J_ica + alpha*J_regression + lamda*J_sparse
+    #J = J_ica + alpha*J_regression + lamda*J_sparse
+    J = J_ica + lamda*J_sparse
 
     with tf.Session() as sess:
-        bd_opt = BoldDriverOptimizer(sess, J, [W, B, b], \
-                [gen_orthonormal(p), np.zeros((p, r)), np.random.randn(r)], \
-                [W_ortho, None, None])
+        bd_opt = BoldDriverOptimizer(sess, J, [W, B_err], \
+                [gen_orthonormal(p), np.zeros_like(Y)], \
+                [W_ortho, B_err_null])
         while not bd_opt.converged:
             bd_opt.run()
             print(bd_opt.f)
-        _W, _B, _b = bd_opt.x
-        feed_dict = {W: _W, B: _B, b: _b}
-        print(sess.run([J_ica, J_regression, J_sparse], feed_dict=feed_dict))
+        _W, _B_err = bd_opt.x
+        feed_dict = {W: _W, B_err: _B_err}
+        _B = (B + B_err).eval(feed_dict=feed_dict)
+        print(sess.run([J_ica, J_sparse], feed_dict=feed_dict))
 
     S = _W.dot(X_w)
 
-    return S, _W, _B, _b
+    return S, _W, _B
     
 

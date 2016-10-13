@@ -29,13 +29,14 @@ class BoldDriverOptimizer():
         f0 = self.f
         x0 = self.x[:]
         
-        feed_dict0 = {tf_x: x for tf_x, x in zip(self._tf_x, x0)}
-        res = self._sess.run([self._tf_f] + self._tf_dx, feed_dict=feed_dict0)
+        feed_dict = {tf_x: x for tf_x, x in zip(self._tf_x, x0)}
+        res = self._sess.run([self._tf_f] + self._tf_dx, feed_dict=feed_dict)
         self.f = res[0]
         dx0 = res[1:]
 
         self.x = [x - self._r*dx for x, dx in zip(x0, dx0)]
-        self.x = [x if proj is None else proj.eval(feed_dict={tf_x: x}) \
+        feed_dict = {tf_x: x for tf_x, x in zip(self._tf_x, self.x)}
+        self.x = [x if proj is None else proj.eval(feed_dict=feed_dict) \
                 for x, tf_x, proj in zip(self.x, self._tf_x, self._tf_proj)]
 
         feed_dict = {tf_x: x for tf_x, x in zip(self._tf_x, self.x)}
